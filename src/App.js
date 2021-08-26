@@ -1,5 +1,8 @@
 import "./App.css";
-import "bootstrap/dist/css/bootstrap.min.css";
+import "antd/dist/antd.css";
+import { Button } from "antd";
+import { useEffect, useState } from "react";
+
 import firebase from "firebase";
 
 const firebaseConfig = {
@@ -15,22 +18,66 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 function App() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    const loggedInLocalStorage = localStorage.getItem("loggedIn");
+    setLoggedIn(loggedInLocalStorage);
+
+    const userDataLocalStorage = localStorage.getItem("userData");
+    const userDataParse = userDataLocalStorage
+      ? JSON.parse(userDataLocalStorage)
+      : null;
+    setUserData(userDataParse);
+  }, []);
+
   const handleSignIn = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     firebase
       .auth()
       .signInWithPopup(provider)
       .then((result) => {
-        console.log({ result });
+        const { user } = result;
+        setLoggedIn(true);
+        setUserData(user);
+        localStorage.setItem("loggedIn", true);
+        localStorage.setItem("userData", JSON.stringify(user));
       })
       .catch((error) => {
         console.log({ error });
       });
   };
 
+  const handleSignOut = () => {
+    firebase
+      .auth()
+      .signOut()
+      .then(() => {
+        setLoggedIn(false);
+        setUserData(null);
+        localStorage.removeItem("loggedIn");
+        localStorage.removeItem("userData");
+      })
+      .catch((error) => console.log({ error }));
+  };
+
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
-      <button onClick={handleSignIn}>Sign in with Google</button>
+    <div className="app-container">
+      {!loggedIn && (
+        <Button onClick={handleSignIn} type="primary">
+          Sign in with Google
+        </Button>
+      )}
+      {loggedIn && (
+        <div className="user-info">
+          <p>{`Name: ${userData?.displayName || ""}`}</p>
+          <p>{`Email: ${userData?.email || ""}`}</p>
+          <Button onClick={handleSignOut} type="primary" danger>
+            Sign out
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
